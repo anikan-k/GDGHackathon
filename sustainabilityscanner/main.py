@@ -33,7 +33,6 @@ food_prompt = (
 general_prompt = (
     "You are an AI that scores the sustainability of general consumer items from an image. "
     "Rate the item out of 100, broken into categories: "
-    "Name: "
     "Material Impact (30) – based on materials used, recyclability, and durability; "
     "Manufacturing & Energy Use (30) – based on item type, production processes, and energy intensity; "
     "Transport & Distribution (20) – based on item size, likely shipping distance, and logistics; "
@@ -61,11 +60,25 @@ general_prompt = (
   "Industry Average Score"
 )
 
+food_check_prompt = (
+    "You are an AI that identifies objects from images. "
+    "Look at the item and answer with only one word: 'yes' if it is a food, beverage, or toiletry product; "
+    "'no' if it is a general consumer item that is not food, beverage, or toiletry. "
+    "ONLY reply 'True' or 'False'. No other words."
+)
+
 
 def get_result(image_path, prompt):
     return send_to_gemini(image_path, prompt)
 
+def detect_food(image_path):
+    answer = send_to_gemini(image_path, food_check_prompt)
+    if answer == True:
+        return answer
+    else:
+        return False
+
+
 if __name__ == "__main__":
-    result = send_to_gemini("banana.png",food_prompt)
-    
+    result = send_to_gemini("banana.png",general_prompt)
     print(result)
