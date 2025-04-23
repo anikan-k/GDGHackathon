@@ -3,6 +3,8 @@ import base64
 import os
 from dotenv import load_dotenv
 import json
+import re
+
 
 
 
@@ -11,6 +13,9 @@ load_dotenv()
 api_key = os.getenv("API_KEY")
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-03-25:generateContent?key={api_key}"
 IMAGES_DIR = "images"
+
+
+
 
 # --- Load and Encode Image ---
 def encode_image(image_name: str) -> str:
@@ -42,8 +47,10 @@ def send_to_gemini(image_name: str, prompt: str) -> str:
     return response.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 
-def results_clean(result):
-    removed_slash = result.strip().replace('```json', '').replace('```', '').strip()
-    cleaned = json.loads(removed_slash)
-    return cleaned
+def clean_json_from_gemini_output(result: str) -> str:
+    """
+    Remove triple backticks and optional 'json' label from Gemini's response.
+    Returns a raw JSON string, not a Python dict.
+    """
+    return re.sub(r"^```json|^```|```$", "", result.strip(), flags=re.IGNORECASE).strip()
 

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sustainability Score Checker</title>
+</head>
+<body>
+  <h1>Sustainability Scanner</h1>
+
+  <label for="imageName">Enter image filename (in /images folder):</label>
+  <input type="text" id="imageName" placeholder="e.g. banana.jpg" />
+  <button onclick="submitImage()">Submit</button>
+
+  <pre id="output" style="white-space: pre-wrap; margin-top: 20px;"></pre>
+
+  <div id="loader" style="display:none; margin-top:20px;">🔄 Scanning...</div>
+
+
+  <script>
+    async function submitImage() {
+      const imageName = document.getElementById("imageName").value;
+  
+      // Show loader, clear output
+      document.getElementById("loader").style.display = "block";
+      document.getElementById("output").textContent = "";
+  
+      try {
+        const response = await fetch("http://localhost:5000/score", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageName })
+        });
+  
+        const text = await response.text();
+  
+        try {
+          const json = JSON.parse(text);
+          document.getElementById("output").textContent = JSON.stringify(json, null, 2);
+        } catch (err) {
+          document.getElementById("output").textContent = "❌ Invalid JSON:\n\n" + text;
+        }
+      } catch (err) {
+        document.getElementById("output").textContent = "❌ Request failed:\n\n" + err;
+      } finally {
+        document.getElementById("loader").style.display = "none";
+      }
+    }
+  </script>
+  
+</body>
+</html>

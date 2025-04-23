@@ -1,20 +1,27 @@
 from flask import Flask, request, jsonify
-from gemini import send_to_gemini, results_clean
+from gemini import send_to_gemini, clean_json_from_gemini_output
 from main import combined_prompt
+from flask_cors import CORS
+import json
+
+
 
 app = Flask(__name__)
+CORS(app)
+
 
 @app.route("/score", methods=["POST"])
 def score():
-    data = request.json
-    image_name = data["imageName"]
-
+    image_name = request.json["imageName"]
     raw_result = send_to_gemini(image_name, combined_prompt)
+    clean_json_str = clean_json_from_gemini_output(raw_result)
+
     try:
-        clean_result = results_clean(raw_result)
-        return jsonify(clean_result)
+        parsed = json.loads(clean_json_str)  # now it's real JSON
+        return jsonify(parsed)
     except Exception as e:
-        return jsonify({"error": str(e), "raw_output": raw_result}), 500
+        return jsonify({"error": str(e), "raw_output": clean_json_str}), 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
