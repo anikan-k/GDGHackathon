@@ -1,10 +1,15 @@
 import requests
 import base64
 import os
+from dotenv import load_dotenv
+import json
+
+
 
 # --- Config ---
-API_KEY = "AIzaSyCny7TSX1Vx-5ZL8pDSzdU9hi7SxpOM2-4"  # Replace with your actual key
-GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-03-25:generateContent?key={API_KEY}"
+load_dotenv()
+api_key = os.getenv("API_KEY")
+GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-03-25:generateContent?key={api_key}"
 IMAGES_DIR = "images"
 
 # --- Load and Encode Image ---
@@ -35,3 +40,10 @@ def send_to_gemini(image_name: str, prompt: str) -> str:
     response.raise_for_status()
 
     return response.json()["candidates"][0]["content"]["parts"][0]["text"]
+
+
+def results_clean(result):
+    removed_slash = result.strip().replace('```json', '').replace('```', '').strip()
+    cleaned = json.loads(removed_slash)
+    return cleaned
+
