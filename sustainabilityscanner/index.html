@@ -24,7 +24,8 @@
       document.getElementById("output").textContent = "";
   
       try {
-        const response = await fetch("http://localhost:5000/score", {
+        const response = await fetch("http://172.20.10.2:5000/score", {     // GOTTA CHANGE THIS EVERY TIME TO MY IP (THIRD ONE WHEN STARTING SERVER)
+
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ imageName })
