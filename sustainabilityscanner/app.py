@@ -1,19 +1,20 @@
 from flask import Flask, request, jsonify
-from main import get_result, detect_food, food_prompt, general_prompt
+from gemini import send_to_gemini, results_clean
+from main import combined_prompt
 
 app = Flask(__name__)
 
 @app.route("/score", methods=["POST"])
-
 def score():
     data = request.json
     image_name = data["imageName"]
 
-    is_food = detect_food(image_name)
-    prompt = food_prompt if is_food else general_prompt
-
-    result = get_result(image_name, prompt)
-    return jsonify(result_clean)
+    raw_result = send_to_gemini(image_name, combined_prompt)
+    try:
+        clean_result = results_clean(raw_result)
+        return jsonify(clean_result)
+    except Exception as e:
+        return jsonify({"error": str(e), "raw_output": raw_result}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
