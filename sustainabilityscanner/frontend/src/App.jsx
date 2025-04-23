@@ -4,8 +4,57 @@ import fiji from './assets/fiji.png';
 import { useState, useEffect } from 'react';
 
 function CameraScreen({ image, loading, scanResult, onBack }) {
+  const [animatedScores, setAnimatedScores] = useState({});
+
+  // Define max score per category (align with your Gemini prompt)
+  const categoryMaxes = {
+    "Packaging Impact": 30,
+    "Product Ingredients": 40,
+    "Manufacturing Process": 20,
+    "Supply Chain & Distribution": 10,
+    "Material Impact": 35,
+    "Manufacturing & Energy Use": 30,
+    "Transport & Distribution": 20,
+    "End-of-Life": 15
+  };
+
+  useEffect(() => {
+    if (!loading && scanResult) {
+      const targets = {};
+      Object.entries(scanResult).forEach(([key, value]) => {
+        if (typeof value === "object" && value.score !== undefined) {
+          targets[key] = value.score;
+        }
+      });
+
+      const start = performance.now();
+      const animate = () => {
+        const now = performance.now();
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / 700, 1);
+
+        const currentScores = {};
+        Object.entries(targets).forEach(([key, target]) => {
+          currentScores[key] = Math.round(target * progress);
+        });
+
+        setAnimatedScores(currentScores);
+        if (progress < 1) requestAnimationFrame(animate);
+      };
+
+      animate();
+    }
+  }, [scanResult, loading]);
+
+  const getSliderColour = (score, max) => {
+    const percent = Math.min(score / max, 1); // Ensure not over 100%
+    const hue = percent * 120; // 0 (red) → 120 (green)
+    return `hsl(${hue}, 80%, 50%)`;
+  };
+  
+
   return (
-    <div className="camera-screen">
+    <div className="camera-screen" style={{ background: "white", color: "black", padding: "1rem" }}>
       {image && (
         <img
           src={image}
@@ -14,36 +63,44 @@ function CameraScreen({ image, loading, scanResult, onBack }) {
         />
       )}
 
-      {loading && (
-        <p style={{ textAlign: "center", fontWeight: "bold", fontSize: "18px" }}>
-          🔄 Scanning item...
-        </p>
-      )}
-
-      {!loading && scanResult && (
-        <div style={{ padding: "1rem" }}>
-          {Object.entries(scanResult).map(([key, value]) => {
-            if (typeof value === "object" && value.score !== undefined) {
-              return (
-                <div key={key} style={{ marginBottom: "1.5rem" }}>
-                  <label style={{ fontWeight: "bold" }}>{key}</label>
+      {loading ? (
+        <p style={{ textAlign: "center", fontWeight: "bold", fontSize: "18px" }}>🔄 Scanning item...</p>
+      ) : (
+        scanResult && (
+          <div>
+            {Object.entries(scanResult).map(([key, value]) =>
+              typeof value === "object" && value.score !== undefined ? (
+                <div key={key} style={{ marginBottom: "1.2rem" }}>
+                  <label style={{ fontWeight: "bold", fontSize: "1rem", display: "block", marginBottom: "0.2rem" }}>
+                    {key}
+                  </label>
                   <input
                     type="range"
                     min="0"
-                    max="10"
-                    value={value.score}
+                    max={categoryMaxes[key] || 10}
+                    value={Math.min(animatedScores[key] || 0, categoryMaxes[key] || 10)}
                     disabled
-                    style={{ width: "100%" }}
+                    style={{
+                      width: "100%",
+                      appearance: "none",
+                      height: "6px",
+                      borderRadius: "5px",
+                      background: getSliderColour(animatedScores[key] || 0, categoryMaxes[key] || 10),
+                      transition: "background 0.2s linear"
+                    }}
                   />
-                  <p style={{ fontSize: "0.9rem", color: "#555" }}>{value.reason}</p>
                 </div>
-              );
-            }
-            return null;
-          })}
-        </div>
-      )}
+              ) : null
+            )}
 
+            {scanResult["Total Score"] !== undefined && (
+              <h3 style={{ marginTop: "2rem", textAlign: "center" }}>
+                🌍 Total Score: {scanResult["Total Score"]} / 100
+              </h3>
+            )}
+          </div>
+        )
+      )}
 
       <div className="camera-controls">
         <button onClick={onBack}>🔙 Back to Home</button>
@@ -51,6 +108,8 @@ function CameraScreen({ image, loading, scanResult, onBack }) {
     </div>
   );
 }
+
+
 
 function CaptureView({ onCapture }) {
   useEffect(() => {
@@ -90,6 +149,7 @@ function CaptureView({ onCapture }) {
     </div>
   );
 }
+
 
 function App() {
   const [mode, setMode] = useState("home"); // 'home' | 'capture' | 'result'
