@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
 
+
+
 * {
   box-sizing: border-box;
 }
@@ -8,10 +10,11 @@ body, html {
   margin: 0;
   padding: 0;
   font-family: 'Inter', sans-serif;
-  background: #f6f6f6;
-  color: #111;
+  background: white;    /* ✅ Consistent white background */
+  color: black;         /* ✅ Ensure contrast is correct */
   height: 100%;
 }
+
 
 .app {
   max-width: 430px;
@@ -279,3 +282,23 @@ body, html {
   border-radius: 8px;
   cursor: pointer;
 }
+
+.camera-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: white;
+  z-index: 100;
+}
+
+.camera-controls {
+  position: absolute;
+  bottom: 20px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+

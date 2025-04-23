@@ -1,10 +1,131 @@
 // src/App.jsx
 import './App.css';
 import fiji from './assets/fiji.png';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+function CameraScreen({ image, loading, scanResult, onBack }) {
+  return (
+    <div className="camera-screen">
+      {image && (
+        <img
+          src={image}
+          alt="Captured"
+          style={{ width: "100%", maxHeight: "250px", objectFit: "cover", marginBottom: "1rem" }}
+        />
+      )}
+
+      {loading && (
+        <p style={{ textAlign: "center", fontWeight: "bold", fontSize: "18px" }}>
+          🔄 Scanning item...
+        </p>
+      )}
+
+      {!loading && scanResult && (
+        <div style={{ padding: "1rem" }}>
+          {Object.entries(scanResult).map(([key, value]) => {
+            if (typeof value === "object" && value.score !== undefined) {
+              return (
+                <div key={key} style={{ marginBottom: "1.5rem" }}>
+                  <label style={{ fontWeight: "bold" }}>{key}</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="10"
+                    value={value.score}
+                    disabled
+                    style={{ width: "100%" }}
+                  />
+                  <p style={{ fontSize: "0.9rem", color: "#555" }}>{value.reason}</p>
+                </div>
+              );
+            }
+            return null;
+          })}
+        </div>
+      )}
+
+
+      <div className="camera-controls">
+        <button onClick={onBack}>🔙 Back to Home</button>
+      </div>
+    </div>
+  );
+}
+
+function CaptureView({ onCapture }) {
+  useEffect(() => {
+    const startCamera = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const video = document.getElementById("camera");
+        if (video) video.srcObject = stream;
+      } catch (err) {
+        console.error("Camera access denied:", err);
+      }
+    };
+    startCamera();
+  }, []);
+
+  const takePhoto = () => {
+    const video = document.getElementById("camera");
+    const canvas = document.getElementById("capture");
+
+    if (video && canvas) {
+      const ctx = canvas.getContext("2d");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageBase64 = canvas.toDataURL("image/jpeg");
+      onCapture(imageBase64);
+    }
+  };
+
+  return (
+    <div className="camera-screen">
+      <video id="camera" autoPlay playsInline style={{ width: '100%', height: '100%' }}></video>
+      <canvas id="capture" style={{ display: "none" }}></canvas>
+      <div className="camera-controls">
+        <button onClick={takePhoto}>📸</button>
+      </div>
+    </div>
+  );
+}
 
 function App() {
-  const [showModal, setShowModal] = useState(false);
+  const [mode, setMode] = useState("home"); // 'home' | 'capture' | 'result'
+  const [capturedImage, setCapturedImage] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+
+  const handleCapture = (imageBase64) => {
+    setCapturedImage(imageBase64);
+    setMode("result");
+    setLoading(true);
+
+    fetch("http://localhost:5000/score", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageBase64 })
+    })
+      .then(res => res.json())
+      .then(data => {
+        setScanResult(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Error:", err);
+        setLoading(false);
+        alert("Failed to score image.");
+      });
+  };
+
+  if (mode === "capture") {
+    return <CaptureView onCapture={handleCapture} />;
+  }
+
+  if (mode === "result") {
+    return <CameraScreen image={capturedImage} loading={loading} scanResult={scanResult} onBack={() => setMode("home")} />;
+  }
 
   return (
     <div className="app">
@@ -73,21 +194,10 @@ function App() {
         <button className="nav-btn">🏠<br />Home</button>
         <button className="nav-btn">📈<br />Progress</button>
         <button className="nav-btn">⚙️<br />Database</button>
-        <button className="plus" onClick={() => setShowModal(true)}>＋</button>
+        <button className="plus" onClick={() => setMode("capture")}>＋</button>
       </footer>
-
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>New Action</h3>
-            <p>This is where your form, camera, or add feature can go.</p>
-            <button className="close-btn" onClick={() => setShowModal(false)}>Close</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
 export default App;
-
