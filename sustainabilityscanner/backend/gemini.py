@@ -16,7 +16,6 @@ IMAGES_DIR = "images"
 
 
 
-
 # --- Load and Encode Image ---
 def encode_image(image_name: str) -> str:
     image_path = os.path.join(IMAGES_DIR, image_name)
