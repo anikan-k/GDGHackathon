@@ -45,6 +45,21 @@ def send_to_gemini(image_name: str, prompt: str) -> str:
 
     return response.json()["candidates"][0]["content"]["parts"][0]["text"]
 
+def send_text_to_gemini(prompt: str) -> str:
+    payload = {
+        "contents": [{
+            "parts": [
+                {"text": prompt}
+            ]
+        }]
+    }
+
+    response = requests.post(GEMINI_URL, json=payload)
+    response.raise_for_status()
+    return response.json()["candidates"][0]["content"]["parts"][0]["text"]
+
+
+
 
 def clean_json_from_gemini_output(result: str) -> str:
     """

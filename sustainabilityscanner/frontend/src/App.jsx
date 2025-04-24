@@ -1,12 +1,17 @@
 // src/App.jsx
 import './App.css';
 import fiji from './assets/fiji.png';
+import graphz from './assets/graph.png.PNG';
+import treeloading from './assets/treeloading1.gif';
+
+
 import { useState, useEffect } from 'react';
 
-function CameraScreen({ image, loading, scanResult, onBack }) {
+function CameraScreen({ image, loading, scanResult, onBack, setMode }) {
   const [animatedScores, setAnimatedScores] = useState({});
+  const [hoveredCategory, setHoveredCategory] = useState(null);
+  const [showReason, setShowReason] = useState(false);
 
-  // Define max score per category (align with your Gemini prompt)
   const categoryMaxes = {
     "Packaging Impact": 30,
     "Product Ingredients": 40,
@@ -47,11 +52,10 @@ function CameraScreen({ image, loading, scanResult, onBack }) {
   }, [scanResult, loading]);
 
   const getSliderColour = (score, max) => {
-    const percent = Math.min(score / max, 1); // Ensure not over 100%
-    const hue = percent * 120; // 0 (red) → 120 (green)
+    const percent = Math.min(score / max, 1);
+    const hue = percent * 120;
     return `hsl(${hue}, 80%, 50%)`;
   };
-  
 
   return (
     <div className="camera-screen" style={{ background: "white", color: "black", padding: "1rem" }}>
@@ -59,52 +63,108 @@ function CameraScreen({ image, loading, scanResult, onBack }) {
         <img
           src={image}
           alt="Captured"
-          style={{ width: "100%", maxHeight: "250px", objectFit: "cover", marginBottom: "1rem" }}
+          style={{ width: "100%", maxHeight: "250px", objectFit: "cover", borderRadius: "12px", marginBottom: "1rem" }}
         />
       )}
 
-      {loading ? (
-        <p style={{ textAlign: "center", fontWeight: "bold", fontSize: "18px" }}>🔄 Scanning item...</p>
-      ) : (
+{loading ? (
+  <div style={{ textAlign: "center", marginTop: "2rem" }}>
+    <img src={treeloading} alt="Loading..." style={{ width: "140px", height: "140px" }} />
+  </div>
+) : (
+
         scanResult && (
           <div>
-            {Object.entries(scanResult).map(([key, value]) =>
-              typeof value === "object" && value.score !== undefined ? (
-                <div key={key} style={{ marginBottom: "1.2rem" }}>
-                  <label style={{ fontWeight: "bold", fontSize: "1rem", display: "block", marginBottom: "0.2rem" }}>
-                    {key}
-                  </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max={categoryMaxes[key] || 10}
-                    value={Math.min(animatedScores[key] || 0, categoryMaxes[key] || 10)}
-                    disabled
-                    style={{
-                      width: "100%",
-                      appearance: "none",
-                      height: "6px",
-                      borderRadius: "5px",
-                      background: getSliderColour(animatedScores[key] || 0, categoryMaxes[key] || 10),
-                      transition: "background 0.2s linear"
-                    }}
-                  />
-                </div>
-              ) : null
-            )}
+            <h2 style={{ fontSize: "1.5rem", fontWeight: "700", textAlign: "center" }}>{scanResult["Name"]}</h2>
 
-            {scanResult["Total Score"] !== undefined && (
-              <h3 style={{ marginTop: "2rem", textAlign: "center" }}>
-                🌍 Total Score: {scanResult["Total Score"]} / 100
-              </h3>
-            )}
+            <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+              <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>{scanResult["Total Score"]}</span>
+              <div style={{ background: "#eee", borderRadius: "999px", overflow: "hidden", height: "10px", marginTop: "0.5rem" }}>
+                <div style={{
+                  height: "100%",
+                  width: `${scanResult["Total Score"]}%`,
+                  background: "#ffa500"
+                }}></div>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              {Object.entries(scanResult).map(([key, value]) =>
+                typeof value === "object" && value.score !== undefined ? (
+                  <div
+                      key={key}
+                      onClick={() => {
+                        setHoveredCategory({ label: key, reason: value.reason });
+                        setShowReason(true);
+                      }}
+                      
+                      style={{
+                        background: "#f9f9f9",
+                        borderRadius: "16px",
+                        padding: "1rem",
+                        boxShadow: "0 2px 5px rgba(0,0,0,0.05)",
+                        cursor: "pointer"
+                      }}
+                    >
+                    <div style={{ fontSize: "0.9rem", fontWeight: "600", marginBottom: "0.5rem" }}>{key}</div>
+                    <div style={{ background: "#e0e0e0", borderRadius: "999px", height: "10px", overflow: "hidden" }}>
+                      <div style={{
+                        height: "100%",
+                        width: `${(animatedScores[key] || 0) / categoryMaxes[key] * 100}%`,
+                        background: getSliderColour(animatedScores[key] || 0, categoryMaxes[key])
+                      }}></div>
+                    </div>
+                  </div>
+                ) : null
+              )}
+            </div>
+
+                        {/* Move outside main render return */}
+                        {showReason && hoveredCategory && (
+  <div className="modal-overlay">
+    <div className="modal">
+      <h3 style={{ marginBottom: "0.5rem" }}>{hoveredCategory.label}</h3>
+      <p style={{ fontSize: "0.95rem", lineHeight: "1.5", color: "#333" }}>
+        {hoveredCategory.reason}
+      </p>
+      <button
+        onClick={() => {
+          setShowReason(false);
+          setHoveredCategory(null);
+        }}
+        style={{
+          marginTop: "1rem",
+          padding: "0.5rem 1rem",
+          borderRadius: "8px",
+          background: "#f0f0f0",
+          border: "none",
+          cursor: "pointer"
+        }}
+      >
+        Close
+      </button>
+    </div>
+  </div>
+)}
+
+
+
+
           </div>
         )
       )}
 
-      <div className="camera-controls">
-        <button onClick={onBack}>🔙 Back to Home</button>
-      </div>
+<div className="camera-controls" style={{ marginTop: "2rem", display: "flex", justifyContent: "center", gap: "1rem" }}>
+  <button style={{ padding: "0.6rem 1rem", borderRadius: "12px", fontSize: "1rem" }} onClick={onBack}>🔙</button>
+  <button style={{ padding: "0.6rem 1rem", borderRadius: "12px", fontSize: "1rem" }} onClick={() => {
+    setAnimatedScores({});
+    setHoveredCategory(null);
+    setShowReason(false);
+    setTimeout(() => setMode("capture"), 0);
+  }}>📷</button>
+</div>
+
+
     </div>
   );
 }
@@ -150,54 +210,258 @@ function CaptureView({ onCapture }) {
   );
 }
 
+function DatabaseView({ onBack, query, onQueryChange, onSubmit, result, dbLoading }) {
+  return (
+    <div
+  style={{
+    position: "relative",
+    height: "100%",
+    background: "white",
+    padding: "1rem",
+    boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    overflowY: "auto",         // ✅ enable vertical scrolling
+    maxHeight: "calc(100vh - 2rem)" // ✅ avoids spilling out of frame
+  }}
+>
+
+      <div>
+        <h2 style={{ fontSize: "1.2rem", marginBottom: "1rem" }}>
+          Search Product Sustainability
+        </h2>
+
+        <div style={{ position: "relative" }}>
+          <textarea
+            placeholder="Enter a product name..."
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            style={{
+              width: "100%",
+              height: "120px",
+              padding: "1rem",
+              fontSize: "1rem",
+              borderRadius: "12px",
+              border: "1px solid #ccc",
+              resize: "none",
+              fontFamily: "inherit",
+              boxSizing: "border-box"
+            }}
+          />
+          <button
+            onClick={onSubmit}
+            style={{
+              position: "absolute",
+              bottom: "1rem",
+              right: "1rem",
+              fontSize: "1.2rem",
+              border: "none",
+              background: "none",
+              cursor: "pointer"
+            }}
+            aria-label="Submit"
+          >
+            ⏎
+          </button>
+        </div>
+
+        {dbLoading && (
+  <div style={{ textAlign: "center", marginTop: "2rem" }}>
+    <img src={treeloading} alt="Loading..." style={{ width: "120px", height: "120px" }} />
+  </div>
+)}
+
+
+
+        {result && (
+  <div style={{ marginTop: "1.5rem" }}>
+    <h2 style={{ fontSize: "1.5rem", fontWeight: "700", textAlign: "center" }}>{result["Name"]}</h2>
+
+    <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+      <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>{result["Total Score"]}</span>
+      <div style={{ background: "#eee", borderRadius: "999px", overflow: "hidden", height: "10px", marginTop: "0.5rem" }}>
+        <div style={{
+          height: "100%",
+          width: `${result["Total Score"]}%`,
+          background: "#ffa500"
+        }}></div>
+      </div>
+    </div>
+
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+      {Object.entries(result).map(([key, value]) =>
+        typeof value === "object" && value.score !== undefined ? (
+          <div
+            key={key}
+            style={{
+              background: "#f9f9f9",
+              borderRadius: "16px",
+              padding: "1rem",
+              boxShadow: "0 2px 5px rgba(0,0,0,0.05)"
+            }}
+          >
+            <div style={{ fontSize: "0.9rem", fontWeight: "600", marginBottom: "0.5rem" }}>{key}</div>
+            <div style={{ background: "#e0e0e0", borderRadius: "999px", height: "10px", overflow: "hidden" }}>
+              <div style={{
+                height: "100%",
+                width: `${value.score}%`,
+                background: `hsl(${Math.min(value.score / (
+                  key === "Packaging Impact" ? 30 :
+                  key === "Product Ingredients" ? 40 :
+                  key === "Manufacturing Process" ? 20 :
+                  key === "Supply Chain & Distribution" ? 10 :
+                  key === "Material Impact" ? 35 :
+                  key === "Manufacturing & Energy Use" ? 30 :
+                  key === "Transport & Distribution" ? 20 :
+                  key === "End-of-Life" ? 15 : 100
+                ), 1) * 120}, 80%, 50%)`
+              }}></div>
+            </div>
+            <div style={{ fontSize: "0.75rem", marginTop: "0.4rem", color: "#555" }}>{value.reason}</div>
+          </div>
+        ) : null
+      )}
+    </div>
+  </div>
+)}
+
+      </div>
+
+      <div style={{ textAlign: "center", paddingTop: "1rem" }}>
+        <button
+          onClick={onBack}
+          style={{
+            padding: "0.7rem 1.4rem",
+            borderRadius: "999px",
+            background: "#f0f0f0",
+            border: "none",
+            fontSize: "1rem",
+            cursor: "pointer"
+          }}
+        >
+          🔙 Back
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+
+
+
 
 function App() {
   const [mode, setMode] = useState("home"); // 'home' | 'capture' | 'result'
   const [capturedImage, setCapturedImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [scanResult, setScanResult] = useState(null);
+  const [userInput, setUserInput] = useState("");
+  const [result, setResult] = useState(null);
+  const [dbLoading, setDbLoading] = useState(false);
 
-  const handleCapture = (imageBase64) => {
-    setCapturedImage(imageBase64);
-    setMode("result");
-    setLoading(true);
 
-    fetch("http://localhost:5000/score", {
+
+  
+  // Fix this: DATABASE SEARCH — should go to /product-info
+const handleQuerySubmit = async () => {
+  if (!userInput.trim()) return;
+  setDbLoading(true);
+  setResult(null);
+  try {
+    const res = await fetch("/product-info", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageBase64 })
+      body: JSON.stringify({ product: userInput })  // ✅ correct payload
+    });
+    const data = await res.json();
+    setResult(data);
+  } catch (err) {
+    console.error("DB fetch error:", err);
+  } finally {
+    setDbLoading(false);
+  }
+};
+
+  
+  
+  
+  
+  
+  
+const handleCapture = (imageBase64) => {
+  setCapturedImage(imageBase64);
+  setMode("result");
+  setLoading(true);
+
+  fetch("/score", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ imageBase64 })  // ✅ correct key
+  })
+    .then(res => res.json())
+    .then(data => {
+      setScanResult(data);
+      setLoading(false);
     })
-      .then(res => res.json())
-      .then(data => {
-        setScanResult(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Error:", err);
-        setLoading(false);
-        alert("Failed to score image.");
-      });
-  };
+    .catch(err => {
+      console.error("Error:", err);
+      setLoading(false);
+      alert("Failed to score image.");
+    });
+};
 
   if (mode === "capture") {
     return <CaptureView onCapture={handleCapture} />;
   }
 
   if (mode === "result") {
-    return <CameraScreen image={capturedImage} loading={loading} scanResult={scanResult} onBack={() => setMode("home")} />;
+    return (
+      <CameraScreen
+        image={capturedImage}
+        loading={loading}
+        scanResult={scanResult}
+        onBack={() => setMode("home")}
+        setMode={setMode} 
+      />
+    );
   }
+
+  if (mode === "database") {
+    return (
+      <DatabaseView
+        onBack={() => setMode("home")}
+        query={userInput}
+        onQueryChange={setUserInput}
+        onSubmit={handleQuerySubmit}
+        result={result}
+        dbLoading={dbLoading} // ✅ pass the missing prop
+      />
+    );
+  }
+  
+  
+  
+  
+  
 
   return (
     <div className="app">
       <header className="topbar">
-        <div className="time">19:25</div>
-        <div className="status">🔋41</div>
-      </header>
+  <div>
+    <div className="time">19:25</div>
+    <div className="logo"><b>Eco</b><span className="green">AI</span></div>
+  </div>
+  <div className="status-icons">
+    <span className="flame">🔥 0</span>
+    <span className="battery">🔋41</span>
+  </div>
+</header>
 
-      <div className="logo-row">
-        <h1 className="logo">Eco<span className="green">AI</span></h1>
-        <div className="streak-icon">🔥 0</div>
-      </div>
+
+
+
 
       <div className="calendar-row">
         {['T', 'F', 'S', 'S', 'M', 'T', 'W'].map((d, i) => (
@@ -211,22 +475,35 @@ function App() {
       <div className="card streak">
         <div>
           <div className="streak-num">32</div>
-          <div className="streak-label">Sustainability Streak</div>
+          <div className="streak-label">Sustainability Streak April</div>
         </div>
-        <div className="streak-circle">🔥</div>
+        <div className="streak-circle-visual">
+  <span role="img" aria-label="fire">🔥</span>
+</div>
+
       </div>
 
+        
+
+
       <div className="charts">
-        <div className="card chart">
-          <h4>Your Carbon Footprint</h4>
-          <img src="https://i.imgur.com/5bL7dlT.png" alt="Chart" />
-          <p><b>This Month</b> 1,589 kg CO2</p>
-          <p><b>Last Month</b> 2,339 kg CO2</p>
-        </div>
-        <div className="card saved">
-          <p><b>Dollars Saved $</b></p>
-        </div>
-      </div>
+  <div className="card chart">
+    <div className="chart-header">
+      <h4>Your Carbon Footprint</h4>
+    </div>
+    <img src={graphz} alt="Carbon Graph" className="carbon-graph" />
+  </div>
+
+  <div className="card goal-card">
+    <div className="goal-percentage">70%</div>
+    <div className="goal-label">
+      Weekly CO₂<br />goal reached
+    </div>
+    <div className="goal-circle">
+      <span role="img" aria-label="tree">🌳</span>
+    </div>
+  </div>
+</div>
 
       <h3 className="section-title">Recently logged</h3>
 
@@ -253,9 +530,9 @@ function App() {
       <footer className="navbar">
         <button className="nav-btn">🏠<br />Home</button>
         <button className="nav-btn">📈<br />Progress</button>
-        <button className="nav-btn">⚙️<br />Database</button>
-        <button className="plus" onClick={() => setMode("capture")}>＋</button>
-      </footer>
+        <button className="nav-btn" onClick={() => setMode("database")}>⚙️<br />Database</button>
+        <button className="plus" onClick={() => setMode("capture")}>📷</button>
+        </footer>
     </div>
   );
 }
